@@ -1,0 +1,15 @@
+.login-card {
+  max-width: 375px;
+  margin: 1.5rem auto;
+  padding: 2rem 1.5rem;
+}
+.login-heading {
+  margin: 1rem 0 0;
+}
+.login-btn.m1 {
+  margin-top: 1rem;
+}
+.error {
+  color: red;
+  margin-top: 5px;
+}

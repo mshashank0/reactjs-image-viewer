@@ -1,0 +1,54 @@
+.profile-wrapper .search,
+.profile-wrapper .dropdown .account,
+.profile-wrapper .dropdown hr {
+  display: none;
+}
+.profile-wrapper .profile-page-logo {
+  color: white;
+  text-decoration: none;
+}
+.information-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1rem 0;
+}
+.information-section .MuiAvatar-root {
+  width: 60px;
+  height: 60px;
+}
+.information-section .profile-pic {
+  width: 50px;
+  height: 50px;
+}
+.user-info {
+  margin: 0 2rem;
+  width: 350px;
+}
+.user-info .username {
+  font-weight: 500;
+}
+.user-info .fullname {
+  font-size: 0.8rem;
+  margin-right: 1rem;
+}
+.user-info .edit-btn {
+  width: 40px;
+  height: 40px;
+}
+.update-modal .MuiDialogActions-root {
+  padding: 12px 24px;
+  justify-content: start;
+}
+.posts-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+}
+.posts-info p {
+  margin-top: -0.3rem;
+}
+.profile-wrapper .img-grid {
+  width: 90%;
+  margin: 0 auto;
+}

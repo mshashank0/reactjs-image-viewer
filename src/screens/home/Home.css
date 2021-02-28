@@ -1,0 +1,29 @@
+.card-wrapper {
+  width: 90%;
+  margin: 0 auto;
+}
+.card-wrapper .card {
+  display: inline-block;
+  width: 45%;
+  margin: 1rem;
+}
+.content .post-pic {
+  width: 100%;
+  max-height: 250px;
+}
+.content .hashtags {
+  color: #1976d2;
+}
+.content .likes {
+  display: flex;
+}
+.like-icon {
+  cursor: pointer;
+}
+.content .comment-form {
+  display: inline-block;
+}
+.content .comment-form .comment-input {
+  width: 83%;
+  margin-right: 1rem;
+}

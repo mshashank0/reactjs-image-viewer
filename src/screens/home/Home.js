@@ -1,5 +1,6 @@
 import React from "react";
 import Header from "../../common/Header";
+import profileImage from '../../assets/upgrad.svg'
 import {
   Avatar,
   Button,
@@ -8,7 +9,9 @@ import {
   CardHeader,
   FormControl,
   Input,
-  InputLabel
+  InputLabel,
+  GridList,
+  GridListTile
 } from "@material-ui/core";
 import "./Home.css";
 import FavoriteBorderIcon from "@material-ui/icons/FavoriteBorder";
@@ -18,10 +21,13 @@ export default class Home extends React.Component {
   constructor() {
     super();
     this.state = {
-      profilePic: "",
       imagesData: [],
       filterImages: [],
-      liked: false
+      comments: [],
+      commentCount: 0,
+      username: "",
+      comments: [],
+      commentText: []
     };
   }
   componentDidMount() {
@@ -30,44 +36,85 @@ export default class Home extends React.Component {
       window.location = "/";
       return;
     }
-    fetch(
-      `https://api.instagram.com/v1/users/self/?access_token=${accessToken}`
-    )
-      .then(results => {
-        return results.json();
-      })
-      .then(data => {
-        if (data.data) {
-          const { profile_picture } = data.data;
-          this.setState({
-            profilePic: profile_picture
-          });
-        }
-      });
-    fetch(
-      `https://api.instagram.com/v1/users/self/media/recent?access_token=${accessToken}`
-    )
-      .then(results => {
-        return results.json();
-      })
-      .then(data => {
-        if (data.data) {
-          const imagesData = data.data;
-          this.setState({ imagesData: imagesData, filterImages: imagesData });
-        }
-      });
+
+    // Retrieve the JSON string
+    var jsonString = localStorage.getItem("mediaObjects");
+    if (jsonString != undefined) {
+      // Parse the JSON string back to JS object
+      this.state.imagesData = JSON.parse(jsonString);
+      this.setState({ imagesData: this.state.imagesData, filterImages: this.state.imagesData });
+    }
+
+    //Fetch list of media ids along with caption
+    if (this.state.imagesData.length <= 0) {
+      console.log("Fetch start..........")
+      fetch(
+        `https://graph.instagram.com/me/media?fields=id,caption&access_token=${accessToken}`
+      )
+        .then(result => {
+          //Covert the data to json object
+          return result.json();
+        })
+        .then(data => {
+          if (data.data != undefined) {
+            this.state.imagesData = data.data;
+            Promise.all(
+              this.state.imagesData.map(image => {
+                return new Promise((resolve) => {
+                  fetch(`https://graph.instagram.com/${image.id}?fields=id,media_type,media_url,username,timestamp&access_token=${accessToken}`)
+                    .then(response => {
+                      return new Promise(() => {
+                        response.json()
+                          .then(imageObject => {
+                            image.mediaUrl = imageObject.media_url;
+                            image.timestamp = imageObject.timestamp;
+                            image.username = imageObject.username;
+                            image.mediaType = imageObject.media_type;
+                            this.state.username = image.username
+                            image.userHasLiked = false;
+                            image.likes = 1;
+                            resolve()
+                          })
+                      })
+                    })
+                })
+              })
+            )
+              .then(() => {
+                // Convert the person object into JSON string and save it into storage
+                const result = this.state.imagesData.filter(imageData =>
+                  imageData.mediaType === "IMAGE"
+                );
+                localStorage.setItem("mediaObjects", JSON.stringify(result));
+                this.setState({ imagesData: result, filterImages: result });
+              })
+          }
+
+        });
+    }
+
   }
+
+  //This will filter the data based on the typed string in serach box
   filterData = str => {
     const { imagesData } = this.state;
     if (imagesData) {
-      const result = imagesData.filter(imageData =>
-        imageData.caption.text.includes(str)
-      );
-      this.setState({ filterImages: result });
+      console.log(str);
+      if (str != undefined && str != "") {
+        var result = imagesData.filter(imageData =>
+          (imageData.caption != undefined && imageData.caption.includes(str))
+        );
+        this.setState({ filterImages: result });
+      }
+      else {
+        this.setState({ filterImages: imagesData });
+      }
     }
   };
-  dateConvertor = timeStamp => {
-    let newDate = new Date(timeStamp);
+
+  //This will convert timestamo of post image to dd/mm/yyyy HH:MM:SS format
+  dateConvertor = timestamp => {
+    let newDate = new Date(timestamp);
     let year = newDate.getFullYear();
     let monthNo = newDate.getMonth() + 1;
     let date = newDate.getDate();
@@ -84,101 +131,144 @@ export default class Home extends React.Component {
       time: time,
       calSlashDate: date + "/" + monthNo + "/" + year.toString()
     };
+    console.log(timestamp + ", " + dateObj.calSlashDate + " " + dateObj.time)
     return dateObj.calSlashDate + " " + dateObj.time;
   };
+
+  // Like dislike the icon and increase decrease the count
   liked = id => {
     const { filterImages } = this.state;
     const likedImage = filterImages.filter(img => img.id === id);
+
     const updateFilterImages = filterImages.map(img => {
-      var returnValue = { ...img };
       if (img.id === likedImage.id) {
-        returnValue["liked"] = true;
+        img.userHasLiked = img.userHasLiked ? false : true;
       }
-      return returnValue;
     });
-    console.log(updateFilterImages);
   };
+
+  addButtonClick = (imageId) => {
+    var count = this.state.commentCount
+    var comment = {
+      id: count + 1,
+      imageId: imageId,
+      username: this.state.username,
+      text: this.state.commentText.text,
+    }
+    count++;
+    var comments = [...this.state.comments, comment];
+    this.setState({
+      ...this.state,
+      commentCount: count,
+      comments: comments,
+      commentText: "",
+    })
+  };
+
+  onCommentChangeHandler = (event, imageId) => {
+    var comment = {
+      id: imageId,
+      text: event.target.value,
+    }
+    this.setState({
+      ...this.state,
+      commentText: comment,
+    });
+  }
+
+  // Render method fro component
   render() {
-    const { profilePic, filterImages } = this.state;
+    const { filterImages } = this.state;
     return (
       <React.Fragment>
         <Header
           homepageHeader={true}
-          url={profilePic}
+          url={profileImage}
           onFilter={this.filterData}
         />
         <div className="card-wrapper">
           {filterImages && filterImages.length > 0
             ? filterImages.map(img => (
-                <Card className="card" key={img.id}>
-                  <CardHeader
-                    avatar={
-                      <Avatar aria-label="recipe">
-                        <img
-                          src={img.user.profile_picture}
-                          alt="user"
-                          className="profile-pic"
-                        />
-                      </Avatar>
-                    }
-                    title={img.user.username}
-                    subheader={this.dateConvertor(Number(img.created_time))}
-                  />
-                  <CardContent>
-                    <div className="content">
+              <Card className="card" key={img.id}>
+                <CardHeader
+                  avatar={
+                    <Avatar aria-label="recipe">
                       <img
-                        src={img.images.standard_resolution.url}
+                        src={profileImage}
+                        alt="user"
+                        className="profile-pic"
+                      />
+                    </Avatar>
+                  }
+                  title={img.username}
+                  subheader={this.dateConvertor(img.timestamp)}
+                />
+                <CardContent>
+                  <div className="content">
+                    <GridListTile key={"userImg" + img.id} className="user-image-grid-item">
+                      <img
+                        src={img.mediaUrl}
                         alt="post-pic"
                         className="post-pic"
                       />
-                      <hr />
-                      <div className="caption">{img.caption.text}</div>
-                      {img.tags
-                        ? img.tags.map(tag => (
-                            <span className="hashtags" key={tag}>
-                              #{tag}&nbsp;
-                            </span>
-                          ))
-                        : null}
-                      {img.user_has_liked ? (
-                        <p className="likes">
-                          <FavoriteIcon
-                            color="error"
-                            className="like-icon"
-                            onClick={() => this.liked(img.id)}
-                          />
-                          <span className="like-number">
-                            &nbsp;{img.likes.count + 1} likes
+                    </GridListTile>
+                    <hr />
+                    <div className="caption">{img.caption}</div>
+                    {img.tags
+                      ? img.tags.map(tag => (
+                        <span className="hashtags" key={tag}>
+                          #{tag}&nbsp;
+                        </span>
+                      ))
+                      : null}
+                    {img.userHasLiked ? (
+                      <p className="likes">
+                        <FavoriteIcon
+                          color="error"
+                          className="like-icon"
+                          onClick={() => this.liked(img.id)}
+                        />
+                        <span className="like-number">
+                          &nbsp;{img.likes + 1} likes
                           </span>
-                        </p>
-                      ) : (
+                      </p>
+                    ) : (
                         <p className="likes">
                           <FavoriteBorderIcon
                             className="like-icon"
                             onClick={() => this.liked(img.id)}
                           />
                           <span className="like-number">
-                            &nbsp;{img.likes.count} likes
+                            &nbsp;{img.likes} likes
                           </span>
                         </p>
                       )}
-                      <FormControl
-                        fullWidth={true}
-                        margin="normal"
-                        className="comment-form"
-                      >
-                        <InputLabel htmlFor="comment">Add a comment</InputLabel>
-                        <Input className="comment-input" />
-                        <Button variant="contained" color="primary">
-                          ADD
-                        </Button>
-                      </FormControl>
+                    <div className="comments-block">
+                      {this.state.comments.map(comment => (
+                        img.id === comment.imageId ?
+                          <div className="comment-display" key={comment.id}>
+                            <span className="bold-comment-name" >{img.username}:</span> {comment.text}
+                          </div> : null
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-              ))
+                    <FormControl
+                      fullWidth={true}
+                      margin="normal"
+                      className="comment-form"
+                    >
+                      <InputLabel htmlFor="addComment">Add a comment</InputLabel>
+                      <Input className="comment-input" id="addComment" type="text" comment={this.state.addComment} onChange={(event) => this.onCommentChangeHandler(event, img.id)} value={img.id === this.state.commentText.id ? this.state.commentText.text : ""} />
+                      <Button variant="contained" color="primary" onClick={() => this.addButtonClick(img.id)}>
+                        ADD
+                        </Button>
+                    </FormControl>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
             : null}
         </div>
+
       </React.Fragment>
     );
   }

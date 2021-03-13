@@ -7,62 +7,134 @@ import {
   DialogActions,
   DialogTitle,
   DialogContent,
-  TextField
+  TextField,
+  Input,
+  InputLabel,
+  FormControl,
+  GridList,
+  GridListTile
 } from "@material-ui/core";
 
 import Header from "../../common/Header";
+import { withStyles } from '@material-ui/core/styles';
 import EditIcon from "@material-ui/icons/Edit";
 import "./profile.css";
-import ImageGrid from "./imageGrid";
+import profileImage from '../../assets/upgrad.svg'
+import Modal from 'react-modal';
+import FavoriteIcon from "@material-ui/icons/Favorite";
+import FavoriteBorderIcon from "@material-ui/icons/FavoriteBorder";
 
-export default class Profile extends React.Component {
+
+
+const styles = theme => ({
+  avatar: {
+    margin: 10,
+    width: 50,
+    height: 50,
+    marginLeft: 200,
+  },
+  fab: {
+    margin: theme.spacing(1),
+  },
+  gridListMain: {
+    transform: 'translateZ(0)',
+    cursor: 'pointer'
+  },
+  hr: {
+    width: 460,
+  },
+  icon: {
+    margin: theme.spacing(1),
+    fontSize: 32,
+  }
+})
+
+
+class Profile extends React.Component {
   constructor() {
     super();
     this.state = {
-      profilePic: "",
       username: "",
-      counts: {},
       fullName: "",
+      imagesData: [],
       updatedFullname: "",
       emptyFullname: false,
       openModal: false,
-      response: []
+      imgModalIsOpen: false,
+      clickedImgUrl: "",
+      clickedImgId: "",
+      clickedImgUserName: "",
+      clickedImgCaption: "",
+      clickedImgTags: [],
+      clickedImgLikes: 0,
+      favClick: false,
+      commentText: [],
+      comments: [],
+      userCommentsforImage: []
     };
   }
+
   componentDidMount() {
     const accessToken = sessionStorage.getItem("accessToken");
     if (!accessToken) {
       window.location = "/";
       return;
     }
-    fetch(
-      `https://api.instagram.com/v1/users/self/?access_token=${accessToken}`
-    )
-      .then(results => {
-        return results.json();
-      })
-      .then(data => {
-        if (data.data) {
-          const { profile_picture, username, counts, full_name } = data.data;
-          this.setState({
-            profilePic: profile_picture,
-            username: username,
-            counts: counts,
-            fullName: full_name
-          });
-        }
-      });
-    fetch(
-      `https://api.instagram.com/v1/users/self/media/recent?access_token=${accessToken}`
-    )
-      .then(results => {
-        return results.json();
-      })
-      .then(data => {
-        if (data.data) {
-          this.setState({ response: data.data });
-        }
-      });
+
+    // Retrieve the JSON string
+    var jsonString = localStorage.getItem("mediaObjects");
+
+    if (jsonString != undefined) {
+      // Parse the JSON string back to JS object
+      this.state.imagesData = JSON.parse(jsonString);
+      this.setState({ imagesData: this.state.imagesData });
+    }
+
+    if (this.state.imagesData.length <= 0) {
+      console.log("Fetch start..........")
+      fetch(
+        `https://graph.instagram.com/me/media?fields=id,caption&access_token=${accessToken}`
+      )
+        .then(result => {
+          //Covert the data to json object
+          return result.json();
+        })
+        .then(data => {
+          if (data.data != undefined) {
+            this.state.imagesData = data.data;
+            Promise.all(
+              this.state.imagesData.map(image => {
+                return new Promise((resolve) => {
+                  fetch(`https://graph.instagram.com/${image.id}?fields=id,media_type,media_url,username,timestamp&access_token=${accessToken}`)
+                    .then(response => {
+                      return new Promise(() => {
+                        response.json()
+                          .then(imageObject => {
+                            image.mediaUrl = imageObject.media_url;
+                            image.timeStamp = imageObject.timestamp;
+                            image.username = imageObject.username;                            
+                            image.mediaType = imageObject.media_type;
+                            this.state.username = image.username;
+                            image.userHasLiked = true;
+                            image.likes = 1;
+                            resolve()
+                          })
+                      })
+                    })
+                })
+              })
+
+            )
+              .then(() => {
+                const result = this.state.imagesData.filter(imageData =>
+                  imageData.mediaType === "IMAGE"
+                );
+                this.setState({ imagesData: result });
+              })
+          }
+
+        });
+    }
   }
   openModal = () => {
     this.setState({ openModal: true });
@@ -90,29 +162,51 @@ export default class Profile extends React.Component {
     }
   };
 
+  onImageClickHandler = (image) => {
+    
+    this.setState({ clickedImgId: image.id });
+    this.setState({ clickedImgUrl: image.mediaUrl });
+    this.setState({ clickedImgUserName: image.username });
+    this.setState({ clickedImgCaption: image.caption });
+    this.setState({ clickedImgTags:  image.tags != undefined ? image.tags : []});
+    this.setState({ clickedImgLikes: image.likes });
+    console.log(image.caption + ", " + this.state.clickedImgCaption + ", " + this.state.clickedImgUrl);
+    this.openImgModalHandler();
+  }
+
+  openImgModalHandler = () => {
+    this.setState({ imgModalIsOpen: true });
+  }
+
+  closeImgModalHandler = () => {
+    this.setState({ imgModalIsOpen: false });
+  }
+
   render() {
+
+    const { classes } = this.props;
+
     const {
-      profilePic,
+      imagesData,
       username,
-      counts,
       fullName,
       openModal,
-      emptyFullname,
-      response
+      emptyFullname
     } = this.state;
+
     return (
       <div className="profile-wrapper">
-        <Header url={profilePic} homepageHeader={true} goToHome={true} />
+        <Header url={profileImage} homepageHeader={true} goToHome={true} />
         <div className="information-section">
           <Avatar aria-label="recipe">
-            <img src={profilePic} alt="profile-pic" className="profile-pic" />
+            <img src={profileImage} alt="profile-pic" className="profile-pic" />
           </Avatar>
           <div className="user-info">
             <p className="username">{username}</p>
             <div className="posts-info">
-              <p>Posts: {counts.media}</p>
-              <p>Follows: {counts.follows}</p>
-              <p>Followed By: {counts.followed_by}</p>
+              <p>Posts: {imagesData.length}</p>
+              <p>Follows: 230</p>
+              <p>Followed By: 328</p>
             </div>
             <div>
               <span className="fullname">{fullName}</span>
@@ -160,9 +254,72 @@ export default class Profile extends React.Component {
           </div>
         </div>
         <div className="img-grid">
-          <ImageGrid posts={response} />
+          <React.Fragment>
+            <GridList cellHeight={160} cols={3}>
+              {imagesData.map(image => (
+                <GridListTile key={image.id} cols={1} onClick={() => this.onImageClickHandler(image)} alt={image.caption} >
+                  <img src={image.mediaUrl} alt="img" />
+                </GridListTile>
+              ))}
+            </GridList>
+          </React.Fragment>
         </div>
+        <Modal ariaHideApp={false} isOpen={this.state.imgModalIsOpen} contentLabel="imgPost"
+          onRequestClose={this.closeImgModalHandler}>
+          <div className="flex-container">
+            <div className="leftModal">
+              <img src={this.state.clickedImgUrl} className="clickedImg" alt={this.state.clickedImgCaption} />
+            </div>
+            <div className="rightModal">
+              <div className="modalHeader">
+                <span><img src={profileImage} className="userProfilePic" alt={this.state.clickedImgUserName} /></span>
+                <span className="clickedImgUserName">{this.state.clickedImgUserName}</span>
+              </div>
+              <hr className={classes.hr} />
+              <div className="modalBody">
+                <h4 className="captionText">{this.state.clickedImgCaption}</h4>
+                {this.state.clickedImgTags.map(tag => (
+                  <span className="captionTag">{"#" + tag + ""}</span>
+                ))}
+                <div className="comments-block">
+                  {this.state.comments.map(comment => (
+                    this.state.clickedImgId === comment.imageId ?
+                      <div className="comment-display" key={comment.id}>
+                        {comment.username}: {comment.text}
+                      </div> : null
+                  ))}
+                </div>
+
+              </div>
+              <div className="likeSection">
+                <span onClick={() => this.setState({ favClick: !this.state.favClick })}>
+                  {this.state.favClick === true ? <div>
+                    <span className="favIcon"><FavoriteIcon className={classes.icon} /></span>
+                    <span className="like">{" " + (this.state.clickedImgLikes) - 1} likes</span> </div> :
+                    <div><span><FavoriteBorderIcon className={classes.icon} /></span>
+                      <span className="like">{" " + (this.state.clickedImgLikes) + 1} likes</span></div>}
+                </span>
+              </div>
+              <div className="commentAddSection" >
+                <FormControl className="formControl">
+                  <InputLabel htmlFor="addComment">Add a comment</InputLabel>
+                  <Input
+                    id="addComment"
+                    type="text"
+                    comment={this.state.addComment}
+                    onChange={(event) => this.onCommentChangeHandler(event, this.state.clickedImgId)} value={this.state.addComment}
+                  />
+                </FormControl>
+                <Button variant="contained" color="primary" className="AddBtn" onClick={() => this.onClickAddBtn(this.state.clickedImgId)}>
+                  ADD
+                            </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
       </div>
     );
   }
 }
+
+export default withStyles(styles)(Profile);

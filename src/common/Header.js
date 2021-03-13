@@ -1,7 +1,7 @@
 import * as React from "react";
 import "./Header.css";
 import SearchIcon from "@material-ui/icons/Search";
-import { Input, InputAdornment, IconButton } from "@material-ui/core";
+import { Input, InputAdornment, IconButton, Avatar } from "@material-ui/core";
 
 export default class Header extends React.Component {
   constructor(props) {
@@ -59,7 +59,14 @@ export default class Header extends React.Component {
                 onClick={this.toggleDropdown}
                 className="pic-wrapper"
               >
-                <img src={url} className="profile-pic" alt="pic" />
+                <Avatar aria-label="recipe">
+                      <img
+                        src={url}
+                        alt="user"
+                        className="profile-pic"
+                      />
+                    </Avatar>
+                {/* <img src={url} className="profile-pic" alt="pic" /> */}
               </IconButton>
               {showDropdown ? (
                 <div className="dropdown">

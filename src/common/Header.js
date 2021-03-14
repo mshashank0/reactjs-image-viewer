@@ -25,6 +25,8 @@ export default class Header extends React.Component {
   };
   logout = () => {
     sessionStorage.removeItem("accessToken");
+    localStorage.removeItem("mediaObjects");
+    sessionStorage.removeItem("username");
     window.location = "/";
   };
   render() {

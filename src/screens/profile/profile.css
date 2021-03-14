@@ -1,54 +1,202 @@
-.profile-wrapper .search,
-.profile-wrapper .dropdown .account,
-.profile-wrapper .dropdown hr {
+.profile-wrapper .search, .profile-wrapper .dropdown .account, .profile-wrapper .dropdown hr {
   display: none;
 }
+
 .profile-wrapper .profile-page-logo {
   color: white;
   text-decoration: none;
 }
+
 .information-section {
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 1rem 0;
 }
+
 .information-section .MuiAvatar-root {
-  width: 60px;
-  height: 60px;
+  width: 100px;
+  height: 100px;
 }
+
 .information-section .profile-pic {
-  width: 50px;
-  height: 50px;
+  width: 100px;
+  height: 100px;
 }
+
 .user-info {
   margin: 0 2rem;
   width: 350px;
 }
+
 .user-info .username {
   font-weight: 500;
 }
+
 .user-info .fullname {
   font-size: 0.8rem;
   margin-right: 1rem;
 }
+
 .user-info .edit-btn {
   width: 40px;
   height: 40px;
 }
+
 .update-modal .MuiDialogActions-root {
   padding: 12px 24px;
   justify-content: start;
 }
+
 .posts-info {
   display: flex;
   justify-content: space-between;
   font-size: 0.7rem;
 }
+
 .posts-info p {
   margin-top: -0.3rem;
 }
+
 .profile-wrapper .img-grid {
-  width: 90%;
+  width: 80%;
   margin: 0 auto;
+  cursor: pointer;
+  margin-top: 20px;
 }
+
+.red {
+  color: red;
+}
+
+.flex-container {
+  display: flex;
+  height: 100%;
+}
+
+/* Common styles ends */
+
+@media (max-width: 992px) {
+  .flex-container {
+    flex-direction: row;
+  }
+  .left {
+    width: 100%;
+  }
+  .right {
+    width: 90%;
+  }
+  .image-grid-item {
+    margin: 8px;
+  }
+}
+
+.leftModal {
+  width: 50%;
+  height: 'auto';
+}
+
+.rightModal {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 50%;
+}
+
+.modalHeader {
+  flex-direction: row;
+}
+
+.clickedImg {
+  height: auto;
+  width: 96%;
+}
+
+.userProfilePic {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+.captionTag {
+  font-weight: bold;
+  text-align: justify;
+  color: lightblue;
+  margin-top: 0px;
+  padding: 0px;
+}
+
+.clickedImgUserName {
+  margin-left: 30px;
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 5px;
+  position: absolute;
+}
+
+.line {
+  border: 1px solid lightgray;
+  line-height: 15cm;
+}
+
+.favIcon {
+  float: left;
+  color: red;
+}
+
+.likes {
+  display: flex;
+  align-items: center;
+}
+
+.like-number {
+  vertical-align: middle;
+}
+
+.modalBody {
+  margin-bottom: 20px;
+}
+
+.bold-comment-name {
+  font-weight: bold;
+}
+
+.flex-container .comment-form {
+  display: flex;
+  flex-direction: row;
+  height: 40px;
+  padding: 5px;
+  margin-top: 0px;
+  padding-bottom: 0px;
+}
+
+.comment-form .comment-input {
+  width: 83%;
+  margin-right: 0.2rem;
+}
+
+.comments-block {
+  padding-top: 10px;
+  margin-left: 0px;
+  padding-left: 0px;
+}
+
+.MuiButton-root {
+  min-width: 70px;
+}
+
+.comment-display {
+  margin-bottom: 10px;
+}
+
+.ReactModal__Content--after-open {
+  width:80%; 
+  max-width: 800px !important;
+  height: 450px ;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  overflow-y: auto !important;
+}
+

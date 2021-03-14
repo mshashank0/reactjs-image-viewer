@@ -10,7 +10,6 @@ import {
   FormControl,
   Input,
   InputLabel,
-  GridList,
   GridListTile
 } from "@material-ui/core";
 import "./Home.css";
@@ -23,7 +22,6 @@ export default class Home extends React.Component {
     this.state = {
       imagesData: [],
       filterImages: [],
-      comments: [],
       commentCount: 0,
       username: "",
       comments: [],
@@ -32,22 +30,22 @@ export default class Home extends React.Component {
   }
   componentDidMount() {
     const accessToken = sessionStorage.getItem("accessToken");
-    if (!accessToken) {
+    if (!accessToken ) {
       window.location = "/";
       return;
     }
 
     // Retrieve the JSON string
     var jsonString = localStorage.getItem("mediaObjects");
-    if (jsonString != undefined) {
+    if (jsonString !== undefined) {
       // Parse the JSON string back to JS object
-      this.state.imagesData = JSON.parse(jsonString);
-      this.setState({ imagesData: this.state.imagesData, filterImages: this.state.imagesData });
+      let imagesData = JSON.parse(jsonString);
+      this.setState({ imagesData: imagesData, filterImages: imagesData });
     }
 
     //Fetch list of media ids along with caption
     if (this.state.imagesData.length <= 0) {
-      console.log("Fetch start..........")
+      //Api to get image ids and caption
       fetch(
         `https://graph.instagram.com/me/media?fields=id,caption&access_token=${accessToken}`
       )
@@ -56,11 +54,12 @@ export default class Home extends React.Component {
           return result.json();
         })
         .then(data => {
-          if (data.data != undefined) {
-            this.state.imagesData = data.data;
+          if (data.data !== undefined) {
+            let _imagesData = data.data;
             Promise.all(
-              this.state.imagesData.map(image => {
+              _imagesData.map(image => {
                 return new Promise((resolve) => {
+                  //Api to get image details
                   fetch(`https://graph.instagram.com/${image.id}?fields=id,media_type,media_url,username,timestamp&access_token=${accessToken}`)
                     .then(response => {
                       return new Promise(() => {
@@ -70,9 +69,10 @@ export default class Home extends React.Component {
                             image.timestamp = imageObject.timestamp;
                             image.username = imageObject.username;
                             image.mediaType = imageObject.media_type;
-                            this.state.username = image.username
+                            image.tags = ["DummyTag"];
+                            this.setState({username: imageObject.username})
                             image.userHasLiked = false;
-                            image.likes = 1;
+                            image.likes = Math.floor(Math.random() * 100) + 1;
                             resolve()
                           })
                       })
@@ -81,9 +81,14 @@ export default class Home extends React.Component {
               })
             )
               .then(() => {
-                // Convert the person object into JSON string and save it into storage
+                // Convert the media array into JSON string and save it into storage
+                //This is done handle multiple API hits on reload as there is limit on API calls
                 const result = this.state.imagesData.filter(imageData =>
                   imageData.mediaType === "IMAGE"
+                );
+                sessionStorage.setItem(
+                  "username",
+                  this.state.username
                 );
                 localStorage.setItem("mediaObjects", JSON.stringify(result));
                 this.setState({ imagesData: result, filterImages: result });
@@ -99,10 +104,9 @@ export default class Home extends React.Component {
   filterData = str => {
     const { imagesData } = this.state;
     if (imagesData) {
-      console.log(str);
-      if (str != undefined && str != "") {
+      if (str !== undefined && str !== "") {
         var result = imagesData.filter(imageData =>
-          (imageData.caption != undefined && imageData.caption.includes(str))
+          (imageData.caption !== undefined && imageData.caption.toUpperCase().includes(str.toUpperCase()))
         );
         this.setState({ filterImages: result });
       }
@@ -131,22 +135,22 @@ export default class Home extends React.Component {
       time: time,
       calSlashDate: date + "/" + monthNo + "/" + year.toString()
     };
-    console.log(timestamp + ", " + dateObj.calSlashDate + " " + dateObj.time)
     return dateObj.calSlashDate + " " + dateObj.time;
   };
 
   // Like dislike the icon and increase decrease the count
   liked = id => {
     const { filterImages } = this.state;
-    const likedImage = filterImages.filter(img => img.id === id);
-
-    const updateFilterImages = filterImages.map(img => {
-      if (img.id === likedImage.id) {
+    filterImages.map(img => {
+      if (img.id === id) {
         img.userHasLiked = img.userHasLiked ? false : true;
       }
+      return img.userHasLiked;
     });
+    this.setState({ filterImages: filterImages });
   };
 
+  //Add comment button clicked
   addButtonClick = (imageId) => {
     var count = this.state.commentCount
     var comment = {
@@ -165,6 +169,7 @@ export default class Home extends React.Component {
     })
   };
 
+  //Hanlder to edit comment
   onCommentChangeHandler = (event, imageId) => {
     var comment = {
       id: imageId,
@@ -176,7 +181,7 @@ export default class Home extends React.Component {
     });
   }
 
-  // Render method fro component
+  // Render method for component
   render() {
     const { filterImages } = this.state;
     return (
@@ -208,7 +213,7 @@ export default class Home extends React.Component {
                     <GridListTile key={"userImg" + img.id} className="user-image-grid-item">
                       <img
                         src={img.mediaUrl}
-                        alt="post-pic"
+                        alt={img.caption}
                         className="post-pic"
                       />
                     </GridListTile>
@@ -257,7 +262,7 @@ export default class Home extends React.Component {
                       className="comment-form"
                     >
                       <InputLabel htmlFor="addComment">Add a comment</InputLabel>
-                      <Input className="comment-input" id="addComment" type="text" comment={this.state.addComment} onChange={(event) => this.onCommentChangeHandler(event, img.id)} value={img.id === this.state.commentText.id ? this.state.commentText.text : ""} />
+                      <Input className="comment-input" id={"addComment" + img.id} type="text" comment={this.state.addComment} onChange={(event) => this.onCommentChangeHandler(event, img.id)} value={img.id === this.state.commentText.id ? this.state.commentText.text : ""} />
                       <Button variant="contained" color="primary" onClick={() => this.addButtonClick(img.id)}>
                         ADD
                         </Button>

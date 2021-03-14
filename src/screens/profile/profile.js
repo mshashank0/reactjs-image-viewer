@@ -70,7 +70,7 @@ class Profile extends React.Component {
       favClick: false,
       commentText: [],
       comments: [],
-      userCommentsforImage: []
+      commentCount: 0
     };
   }
 
@@ -82,16 +82,17 @@ class Profile extends React.Component {
     }
 
     // Retrieve the JSON string
-    var jsonString = localStorage.getItem("mediaObjects");
-
-    if (jsonString != undefined) {
+    var jsonString = localStorage.getItem("mediaProfileObjects");
+    if (jsonString !== undefined) {
       // Parse the JSON string back to JS object
-      this.state.imagesData = JSON.parse(jsonString);
-      this.setState({ imagesData: this.state.imagesData });
+      let imagesData = JSON.parse(jsonString);
+      const username = sessionStorage.getItem("username");
+      this.setState({ username: username, fullName: username});
+      this.setState({ imagesData: imagesData });
     }
 
     if (this.state.imagesData.length <= 0) {
-      console.log("Fetch start..........")
+      //Api to get image ids and caption
       fetch(
         `https://graph.instagram.com/me/media?fields=id,caption&access_token=${accessToken}`
       )
@@ -100,11 +101,12 @@ class Profile extends React.Component {
           return result.json();
         })
         .then(data => {
-          if (data.data != undefined) {
-            this.state.imagesData = data.data;
+          if (data.data !== undefined) {
+            let imagesData = data.data;
             Promise.all(
-              this.state.imagesData.map(image => {
+              imagesData.map(image => {
                 return new Promise((resolve) => {
+                  //Api to get image details
                   fetch(`https://graph.instagram.com/${image.id}?fields=id,media_type,media_url,username,timestamp&access_token=${accessToken}`)
                     .then(response => {
                       return new Promise(() => {
@@ -112,11 +114,13 @@ class Profile extends React.Component {
                           .then(imageObject => {
                             image.mediaUrl = imageObject.media_url;
                             image.timeStamp = imageObject.timestamp;
-                            image.username = imageObject.username;                            
+                            image.username = imageObject.username;
                             image.mediaType = imageObject.media_type;
-                            this.state.username = image.username;
+                            this.setState({ username: image.username });
+                            this.setState({ fullName: image.username });
                             image.userHasLiked = true;
-                            image.likes = 1;
+                            image.tags = ["DummyTag"];
+                            image.likes = Math.floor(Math.random() * 100) + 1;
                             resolve()
                           })
                       })
@@ -126,9 +130,12 @@ class Profile extends React.Component {
 
             )
               .then(() => {
+                // Convert the media array into JSON string and save it into storage
+                //This is done handle multiple API hits on reload as there is limit on API calls
                 const result = this.state.imagesData.filter(imageData =>
                   imageData.mediaType === "IMAGE"
                 );
+                localStorage.setItem("mediaProfileObjects", JSON.stringify(result));
                 this.setState({ imagesData: result });
               })
           }
@@ -136,18 +143,25 @@ class Profile extends React.Component {
         });
     }
   }
+
+  //Open full name edit modal
   openModal = () => {
     this.setState({ openModal: true });
   };
+
+  //close full name edit modal
   closeModal = () => {
     this.setState({ openModal: false });
   };
+
   handleChange = (e, type) => {
     const value = e.target.value;
     const nextState = {};
     nextState[type] = value;
     this.setState(nextState);
   };
+
+  //Update full name
   updateFullname = () => {
     const { updatedFullname } = this.state;
     if (updatedFullname.trim() !== "") {
@@ -162,25 +176,64 @@ class Profile extends React.Component {
     }
   };
 
+  //Populate values for image details modal
   onImageClickHandler = (image) => {
-    
+
     this.setState({ clickedImgId: image.id });
     this.setState({ clickedImgUrl: image.mediaUrl });
     this.setState({ clickedImgUserName: image.username });
     this.setState({ clickedImgCaption: image.caption });
-    this.setState({ clickedImgTags:  image.tags != undefined ? image.tags : []});
+    this.setState({ clickedImgTags: image.tags !== undefined ? image.tags : [] });
     this.setState({ clickedImgLikes: image.likes });
-    console.log(image.caption + ", " + this.state.clickedImgCaption + ", " + this.state.clickedImgUrl);
     this.openImgModalHandler();
   }
 
+  //Open image details modal
   openImgModalHandler = () => {
     this.setState({ imgModalIsOpen: true });
   }
 
+  //Close image details modal
   closeImgModalHandler = () => {
     this.setState({ imgModalIsOpen: false });
   }
+
+  //Add comment button clicked and append comment
+  addButtonClick = () => {
+    var count = this.state.commentCount
+    var comment = {
+      id: count + 1,
+      imageId: this.state.clickedImgId,
+      username: this.state.username,
+      text: this.state.commentText.text,
+    }
+    count++;
+    var comments = [...this.state.comments, comment];
+    this.setState({
+      ...this.state,
+      commentCount: count,
+      comments: comments,
+      commentText: "",
+    })
+  };
+
+  //Event to update comment on edit
+  onCommentChangeHandler = (event) => {
+    var comment = {
+      id: this.state.clickedImgId,
+      text: event.target.value,
+    }
+    this.setState({
+      ...this.state,
+      commentText: comment,
+    });
+  }
+
+  // Like dislike the icon and increase decrease the count
+  liked = id => {
+    let favClick = this.state.favClick ? false : true;
+    this.setState({ favClick: favClick });
+  };
 
   render() {
 
@@ -255,7 +308,7 @@ class Profile extends React.Component {
         </div>
         <div className="img-grid">
           <React.Fragment>
-            <GridList cellHeight={160} cols={3}>
+            <GridList cellHeight={300} cols={3}>
               {imagesData.map(image => (
                 <GridListTile key={image.id} cols={1} onClick={() => this.onImageClickHandler(image)} alt={image.caption} >
                   <img src={image.mediaUrl} alt="img" />
@@ -271,48 +324,64 @@ class Profile extends React.Component {
               <img src={this.state.clickedImgUrl} className="clickedImg" alt={this.state.clickedImgCaption} />
             </div>
             <div className="rightModal">
+              <div className="bottom-flex">
               <div className="modalHeader">
                 <span><img src={profileImage} className="userProfilePic" alt={this.state.clickedImgUserName} /></span>
                 <span className="clickedImgUserName">{this.state.clickedImgUserName}</span>
               </div>
               <hr className={classes.hr} />
               <div className="modalBody">
-                <h4 className="captionText">{this.state.clickedImgCaption}</h4>
+                <span>{this.state.clickedImgCaption}</span><br />
                 {this.state.clickedImgTags.map(tag => (
-                  <span className="captionTag">{"#" + tag + ""}</span>
+                  <span key={"tag" + Math.floor(Math.random() * 100) + 1} className="captionTag">{"#" + tag + ""}</span>
                 ))}
-                <div className="comments-block">
+                <div className="comments-block" key="comments-block">
                   {this.state.comments.map(comment => (
-                    this.state.clickedImgId === comment.imageId ?
-                      <div className="comment-display" key={comment.id}>
-                        {comment.username}: {comment.text}
-                      </div> : null
+                    <div className="comment-display" key={"comment" + comment.id + Math.floor(Math.random() * 100) + 1}>
+                      <span className="bold-comment-name" >{this.state.clickedImgUserName}:</span> {comment.text}
+                    </div>
                   ))}
                 </div>
-
+                </div>
               </div>
-              <div className="likeSection">
-                <span onClick={() => this.setState({ favClick: !this.state.favClick })}>
-                  {this.state.favClick === true ? <div>
-                    <span className="favIcon"><FavoriteIcon className={classes.icon} /></span>
-                    <span className="like">{" " + (this.state.clickedImgLikes) - 1} likes</span> </div> :
-                    <div><span><FavoriteBorderIcon className={classes.icon} /></span>
-                      <span className="like">{" " + (this.state.clickedImgLikes) + 1} likes</span></div>}
-                </span>
-              </div>
-              <div className="commentAddSection" >
-                <FormControl className="formControl">
-                  <InputLabel htmlFor="addComment">Add a comment</InputLabel>
-                  <Input
-                    id="addComment"
-                    type="text"
-                    comment={this.state.addComment}
-                    onChange={(event) => this.onCommentChangeHandler(event, this.state.clickedImgId)} value={this.state.addComment}
-                  />
-                </FormControl>
-                <Button variant="contained" color="primary" className="AddBtn" onClick={() => this.onClickAddBtn(this.state.clickedImgId)}>
-                  ADD
-                            </Button>
+              <div className="bottom-flex">
+                <div>
+                  {this.state.favClick ? (
+                    <p className="likes">
+                      <FavoriteIcon
+                        color="error"
+                        className="like-icon"
+                        onClick={() => this.liked(this.state.clickedImgId)}
+                      />
+                      <span className="like-number">
+                        &nbsp;{this.state.clickedImgLikes + 1} likes
+                          </span>
+                    </p>
+                  ) : (
+                      <p className="likes">
+                        <FavoriteBorderIcon
+                          className="like-icon"
+                          onClick={() => this.liked(this.state.clickedImgId)}
+                        />
+                        <span className="like-number">
+                          &nbsp;{this.state.clickedImgLikes} likes
+                          </span>
+                      </p>
+                    )}
+                </div>
+                <div >
+                  <FormControl
+                    fullWidth={true}
+                    margin="normal"
+                    className="comment-form"
+                  >
+                    <InputLabel htmlFor="addComment"> &nbsp; Add a comment</InputLabel>
+                    <Input className="comment-input" id="addComment" type="text" comment={this.state.addComment} onChange={(event) => this.onCommentChangeHandler(event)} value={this.state.commentText.text !== undefined ? this.state.commentText.text : ""} />
+                    <Button variant="contained" color="primary" onClick={() => this.addButtonClick()}>
+                      ADD
+                        </Button>
+                  </FormControl>
+                </div>
               </div>
             </div>
           </div>

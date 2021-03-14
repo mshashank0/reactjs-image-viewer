@@ -82,7 +82,7 @@ class Profile extends React.Component {
     }
 
     // Retrieve the JSON string
-    var jsonString = localStorage.getItem("mediaProfileObjects");
+    var jsonString = localStorage.getItem("mediaObjects");
     if (jsonString !== undefined) {
       // Parse the JSON string back to JS object
       let imagesData = JSON.parse(jsonString);
@@ -135,7 +135,7 @@ class Profile extends React.Component {
                 const result = this.state.imagesData.filter(imageData =>
                   imageData.mediaType === "IMAGE"
                 );
-                localStorage.setItem("mediaProfileObjects", JSON.stringify(result));
+                localStorage.setItem("mediaObjects", JSON.stringify(result));
                 this.setState({ imagesData: result });
               })
           }

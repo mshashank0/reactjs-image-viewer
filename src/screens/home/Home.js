@@ -55,9 +55,9 @@ export default class Home extends React.Component {
         })
         .then(data => {
           if (data.data !== undefined) {
-            let _imagesData = data.data;
+            var imagesData = data.data;
             Promise.all(
-              _imagesData.map(image => {
+              imagesData.map(image => {
                 return new Promise((resolve) => {
                   //Api to get image details
                   fetch(`https://graph.instagram.com/${image.id}?fields=id,media_type,media_url,username,timestamp&access_token=${accessToken}`)
@@ -83,7 +83,7 @@ export default class Home extends React.Component {
               .then(() => {
                 // Convert the media array into JSON string and save it into storage
                 //This is done handle multiple API hits on reload as there is limit on API calls
-                const result = this.state.imagesData.filter(imageData =>
+                const result = imagesData.filter(imageData =>
                   imageData.mediaType === "IMAGE"
                 );
                 sessionStorage.setItem(
